@@ -8,15 +8,12 @@ from langchain_community.vectorstores import FAISS
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnableParallel, RunnablePassthrough, RunnableLambda
-import openai
-import subprocess
-import uuid
 
-# Load .env for OpenAI key
+# Load OpenAI key
 load_dotenv()
-openai.api_key = os.getenv("OPENAI_API_KEY")
+openai_api_key = os.getenv("OPENAI_API_KEY")
 
-# Streamlit UI setup
+# Streamlit config
 st.set_page_config(page_title="🎥 YouTube RAG Assistant")
 st.title("🎬 YouTube Video Q&A")
 
@@ -43,34 +40,6 @@ def fetch_transcript(video_id):
     except Exception as e:
         st.warning(f"Transcript API failed: {e}")
         return None
-
-import subprocess
-import uuid
-import openai
-
-from openai import OpenAI
-
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-def whisper_transcribe(video_url):
-    try:
-        audio_file = f"audio_{uuid.uuid4().hex}.mp3"
-        subprocess.run(
-            ["yt-dlp", "-x", "--audio-format", "mp3", "-o", audio_file, video_url],
-            check=True
-        )
-        with open(audio_file, "rb") as f:
-            transcript = client.audio.transcriptions.create(
-                model="whisper-1",
-                file=f
-            )
-        return transcript.text
-    except subprocess.CalledProcessError as e:
-        st.error(f"yt-dlp failed: {e}")
-    except Exception as e:
-        st.error(f"Whisper failed: {e}")
-    return None
-
 
 def build_chain(transcript_text):
     splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
@@ -103,25 +72,22 @@ Question:
             "question": RunnablePassthrough()
         })
         | prompt
-        | ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
+        | ChatOpenAI(model="gpt-3.5-turbo", temperature=0, api_key=openai_api_key)
         | StrOutputParser()
     )
 
     return chain
 
-# UI input
+# UI
 video_url = st.text_input("🔗 Enter YouTube video URL:")
 
 if video_url:
     video_id = extract_video_id(video_url)
     if not video_id:
-        st.error("Invalid YouTube URL")
+        st.error("❌ Invalid YouTube URL")
     else:
         with st.spinner("🔍 Fetching transcript..."):
             transcript = fetch_transcript(video_id)
-            if not transcript:
-                st.warning("⚠️ No captions found. Using Whisper to transcribe...")
-                transcript = whisper_transcribe(video_url)
 
         if transcript:
             st.success("✅ Transcript loaded successfully!")
@@ -143,4 +109,4 @@ if video_url:
                 st.session_state.messages.append({"role": "user", "content": question})
                 st.session_state.messages.append({"role": "assistant", "content": response})
         else:
-            st.error("❌ Failed to extract or transcribe the video.")
+            st.warning("⚠️ This video doesn't have captions. Transcription not supported on Streamlit Cloud.")
