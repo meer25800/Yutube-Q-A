@@ -4,7 +4,5 @@ openai>=1.0.0
 langchain
 langchain-openai
 langchain-community
-youtube-transcript-api
-yt-dlp
+youtube-transcript-api==0.4.4
 faiss-cpu
-tiktoken
