@@ -1,0 +1,14 @@
+streamlit
+langchain
+openai
+chromadb
+python-dotenv
+tqdm
+pandas
+faiss-cpu
+sentence-transformers
+PyPDF2
+watchdog
+unstructured
+llama-index
+requests
